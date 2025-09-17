@@ -21,10 +21,10 @@ import (
 
 	pt "path"
 
+	"crypto/tls"
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
 	"golang.org/x/sys/unix"
-	"crypto/tls"
 )
 
 const (
@@ -51,8 +51,8 @@ type RequestConfig struct {
 }
 
 type ComponentReadyConfig struct {
-	Endpoint           string
-	ExpectedContent    string
+	Endpoint        string
+	ExpectedContent string
 }
 
 var (
@@ -72,7 +72,7 @@ var (
 			ExpectedContent: "compatibilityLevel",
 		},
 		"kafka-rest": {
-			Endpoint:        "topics",
+			Endpoint: "topics",
 		},
 		"control-center": {
 			ExpectedContent: "Control Center",
@@ -533,25 +533,25 @@ func makeRequest(host string, port int, secure bool, ignoreCert bool, username s
 	if !secure {
 		scheme = "http"
 	}
-	
+
 	url := fmt.Sprintf("%s://%s:%d/%s", scheme, host, port, path)
-	
+
 	httpClient := &http.Client{
 		Timeout: defaultHTTPTimeout,
 	}
-	
+
 	if secure && ignoreCert {
 		transport := &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		}
 		httpClient.Transport = transport
 	}
-	
+
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("error creating request: %w", err)
 	}
-	
+
 	if username != "" && password != "" {
 		req.SetBasicAuth(username, password)
 	}
@@ -563,7 +563,7 @@ func makeRequest(host string, port int, secure bool, ignoreCert bool, username s
 // to a request and contains the expected content in the response.
 func checkComponentReady(componentName string, config RequestConfig, expectedContentInBody string) error {
 	status := waitForServer(config.Host, config.Port, config.Timeout)
-	
+
 	if !status {
 		return fmt.Errorf("%s cannot be reached on %s:%d", componentName, config.Host, config.Port)
 	}
@@ -573,16 +573,16 @@ func checkComponentReady(componentName string, config RequestConfig, expectedCon
 		return fmt.Errorf("error making request to %s: %w", componentName, err)
 	}
 	defer resp.Body.Close()
-	
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return fmt.Errorf("error reading response body: %w", err)
 	}
-	
+
 	statusOK := resp.StatusCode >= http.StatusOK && resp.StatusCode < http.StatusMultipleChoices
 	if statusOK && (expectedContentInBody == "" || strings.Contains(string(body), expectedContentInBody)) {
 		return nil
-	} 
+	}
 	return fmt.Errorf("unexpected response from %s with code: %d", componentName, resp.StatusCode)
 }
 
