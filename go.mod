@@ -1,4 +1,4 @@
-module github.com/confluentinc/cp-docker-utils/go
+module github.com/confluentinc/cp-docker-utils
 
 go 1.24.3
 

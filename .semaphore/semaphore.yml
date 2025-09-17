@@ -10,7 +10,7 @@ global_job_config:
     commands:
       - checkout
       - . vault-setup
-      - sem-version go $(cat go/.go-version)
+      - sem-version go $(cat .go-version)
 blocks:
   - name: Go Test
     dependencies: []
