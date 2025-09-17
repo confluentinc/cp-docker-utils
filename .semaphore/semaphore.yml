@@ -10,12 +10,20 @@ global_job_config:
     commands:
       - checkout
       - . vault-setup
+      - sem-version go $(cat go/.go-version)
 
 
 blocks:
-  - name: Echo Hello World
+  - name: Go Test
     task:
       jobs:
-        - name: Echo Hello World
+        - name: Go Test
           commands:
-            - echo "Hello, World!"
+            - make go-test
+  - name: Go Format check
+    dependencies: []
+    task:
+      jobs:
+        - name: Go Format check
+          commands:
+            - make go-check-fmt
