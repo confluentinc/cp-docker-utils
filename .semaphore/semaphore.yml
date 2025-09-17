@@ -1,0 +1,21 @@
+version: v1.0
+name: cp-docker-utils
+agent:
+  machine:
+    type: s1-prod-ubuntu24-04-amd64-1
+execution_time_limit:
+  hours: 1
+global_job_config:
+  prologue:
+    commands:
+      - checkout
+      - . vault-setup
+
+
+blocks:
+  - name: Echo Hello World
+    task:
+      jobs:
+        - name: Echo Hello World
+          commands:
+            - echo "Hello, World!"
