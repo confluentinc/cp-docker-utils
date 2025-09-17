@@ -11,10 +11,9 @@ global_job_config:
       - checkout
       - . vault-setup
       - sem-version go $(cat go/.go-version)
-
-
 blocks:
   - name: Go Test
+    dependencies: []
     task:
       jobs:
         - name: Go Test

@@ -64,7 +64,7 @@ func Test_path(t *testing.T) {
 	}
 	err = os.Chmod(sampleFile2, 0000)
 	defer func() {
-		os.Chmod(sampleFile2, 0777)
+		os.Chmod(sampleFile2, 0755)
 	}()
 	if err != nil {
 		t.Error("Unable to set permissions for the file")
