@@ -5,7 +5,7 @@ go 1.24.3
 require (
 	github.com/spf13/cobra v1.10.1
 	golang.org/x/exp v0.0.0-20250911091902-df9299821621
-	golang.org/x/sys v0.37.0
+	golang.org/x/sys v0.38.0
 )
 
 require (
