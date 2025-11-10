@@ -1039,19 +1039,19 @@ func TestParseLog4jLoggers(t *testing.T) {
 	tests := []struct {
 		name           string
 		loggersStr     string
-		defaultLoggers map[string]string
+		defaultLoggers []map[string]string
 		expected       map[string]string
 	}{
 		{
 			name:           "empty string returns default loggers",
 			loggersStr:     "",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected:       defaultLoggers,
 		},
 		{
 			name:           "single logger override",
 			loggersStr:     "kafka=DEBUG",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected: map[string]string{
 				"root":  "INFO",
 				"kafka": "DEBUG",
@@ -1060,7 +1060,7 @@ func TestParseLog4jLoggers(t *testing.T) {
 		{
 			name:           "multiple logger overrides",
 			loggersStr:     "kafka=DEBUG,root=ERROR",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected: map[string]string{
 				"root":  "ERROR",
 				"kafka": "DEBUG",
@@ -1069,7 +1069,7 @@ func TestParseLog4jLoggers(t *testing.T) {
 		{
 			name:           "new logger addition",
 			loggersStr:     "kafka=DEBUG,new.logger=TRACE",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected: map[string]string{
 				"root":       "INFO",
 				"kafka":      "DEBUG",
@@ -1079,7 +1079,7 @@ func TestParseLog4jLoggers(t *testing.T) {
 		{
 			name:           "whitespace handling",
 			loggersStr:     " kafka = DEBUG , root = ERROR ",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected: map[string]string{
 				"root":  "ERROR",
 				"kafka": "DEBUG",
@@ -1088,14 +1088,51 @@ func TestParseLog4jLoggers(t *testing.T) {
 		{
 			name:           "invalid format preserved in default",
 			loggersStr:     "invalid_format",
-			defaultLoggers: defaultLoggers,
+			defaultLoggers: []map[string]string{defaultLoggers},
 			expected:       defaultLoggers,
+		},
+		{
+			name:           "no defaults provided with logger string",
+			loggersStr:     "kafka=DEBUG,root=ERROR",
+			defaultLoggers: nil,
+			expected: map[string]string{
+				"kafka": "DEBUG",
+				"root":  "ERROR",
+			},
+		},
+		{
+			name:           "empty logger string with no defaults",
+			loggersStr:     "",
+			defaultLoggers: nil,
+			expected:       map[string]string{},
+		},
+		{
+			name:           "single logger with no defaults",
+			loggersStr:     "new.logger=TRACE",
+			defaultLoggers: nil,
+			expected: map[string]string{
+				"new.logger": "TRACE",
+			},
+		},
+		{
+			name:           "whitespace handling with no defaults",
+			loggersStr:     " kafka = DEBUG ",
+			defaultLoggers: nil,
+			expected: map[string]string{
+				"kafka": "DEBUG",
+			},
+		},
+		{
+			name:           "invalid format with no defaults",
+			loggersStr:     "invalid_format",
+			defaultLoggers: nil,
+			expected:       map[string]string{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := parseLog4jLoggers(tt.loggersStr, tt.defaultLoggers)
+			result := parseLog4jLoggers(tt.loggersStr, tt.defaultLoggers...)
 			if !reflect.DeepEqual(result, tt.expected) {
 				t.Errorf("parseLog4jLoggers() = %v, want %v", result, tt.expected)
 			}
