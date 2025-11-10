@@ -792,14 +792,27 @@ func runConnectReadyCmd(args []string) error {
 	return runComponentReadyCmd("connect", args)
 }
 
-func parseLog4jLoggers(loggersStr string, defaultLoggers map[string]string) map[string]string {
+// parseLog4jLoggers parses a comma-separated string of logger=level pairs and returns a map.
+// The optional defaultLoggers parameter provides fallback values when loggersStr is empty.
+// If multiple default maps are provided, only the first is used.
+func parseLog4jLoggers(loggersStr string, defaultLoggers ...map[string]string) map[string]string {
+	var defaults map[string]string
+	if len(defaultLoggers) > 0 {
+		defaults = defaultLoggers[0]
+	}
+
 	if loggersStr == "" {
-		return defaultLoggers
+		if defaults != nil {
+			return defaults
+		}
+		return make(map[string]string)
 	}
 
 	result := make(map[string]string)
-	for k, v := range defaultLoggers {
-		result[k] = v
+	if defaults != nil {
+		for k, v := range defaults {
+			result[k] = v
+		}
 	}
 
 	loggers := strings.Split(loggersStr, ",")
