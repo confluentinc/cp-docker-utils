@@ -26,3 +26,19 @@ blocks:
         - name: Go Format check
           commands:
             - make go-check-fmt
+  - name: Create new version commit and tag
+    dependencies:
+      - Go Test
+      - Go Format check
+    run:
+      when: "branch = 'master'"
+    task:
+      jobs:
+        - name: Create new version commit and tag
+          commands:
+            - git checkout $SEMAPHORE_GIT_BRANCH
+            - git reset --hard
+            - bumpversion patch # Refers .bumpversion.cfg for configuration
+            - LATEST_TAG=$(git describe --tags --abbrev=0)
+            - git push origin $SEMAPHORE_GIT_BRANCH
+            - git push origin $LATEST_TAG
