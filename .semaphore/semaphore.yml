@@ -36,9 +36,10 @@ blocks:
       jobs:
         - name: Create new version commit and tag
           commands:
+            - pip install bump-my-version
             - git checkout $SEMAPHORE_GIT_BRANCH
             - git reset --hard
-            - bumpversion patch # Refers .bumpversion.cfg for configuration
+            - bump-my-version bump patch # Refers .bumpversion.toml for configuration
             - LATEST_TAG=$(git describe --tags --abbrev=0)
             - git push origin $SEMAPHORE_GIT_BRANCH
             - git push origin $LATEST_TAG
