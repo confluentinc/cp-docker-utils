@@ -485,7 +485,7 @@ func invokeJavaCommand(className string, jvmOpts string, args []string) bool {
 
 	opts := []string{}
 	if jvmOpts != "" {
-		opts = append(opts, jvmOpts)
+		opts = append(opts, strings.Fields(jvmOpts)...)
 	}
 	opts = append(opts, "-cp", classPath, className)
 	cmd := exec.Command("java", append(opts[:], args...)...)

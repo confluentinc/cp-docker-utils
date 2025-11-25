@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -1582,6 +1583,43 @@ func Test_runConnectReadyCmd(t *testing.T) {
 			err := runConnectReadyCmd(tt.args)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("runConnectReadyCmd() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_invokeJavaCommand_JVMOptsSplitting(t *testing.T) {
+	tests := []struct {
+		name     string
+		jvmOpts  string
+		wantArgs int
+	}{
+		{
+			name:     "empty string",
+			jvmOpts:  "",
+			wantArgs: 0,
+		},
+		{
+			name:     "single option",
+			jvmOpts:  "-Xmx512M",
+			wantArgs: 1,
+		},
+		{
+			name:     "multiple options with authentication URL",
+			jvmOpts:  "-Xmx512M -Dorg.apache.kafka.sasl.oauthbearer.allowed.urls=https://login.microsoftonline.com/*",
+			wantArgs: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opts := []string{}
+			if tt.jvmOpts != "" {
+				opts = append(opts, strings.Fields(tt.jvmOpts)...)
+			}
+
+			if len(opts) != tt.wantArgs {
+				t.Errorf("got %d args, want %d. Input: %q, Args: %v", len(opts), tt.wantArgs, tt.jvmOpts, opts)
 			}
 		})
 	}
