@@ -2,26 +2,22 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"os/signal"
+	pt "path"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"text/template"
 	"time"
-
-	pt "path"
-
-	"crypto/tls"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/exp/slices"
@@ -59,7 +55,6 @@ type ComponentReadyConfig struct {
 var (
 	bootstrapServers string
 	configFile       string
-	zookeeperConnect string
 	security         string
 
 	secure     bool
@@ -472,42 +467,6 @@ func loadConfigSpec(path string) (ConfigSpec, error) {
 	return spec, nil
 }
 
-func getEnvWithFallbacks(defaultValue string, envVars ...string) string {
-	for _, envVar := range envVars {
-		if val := os.Getenv(envVar); len(val) > 0 {
-			return val
-		}
-	}
-	return defaultValue
-}
-
-func buildJavaCommandArgs(jvmOpts string, classPath string, className string, args []string) []string {
-	opts := []string{}
-	if jvmOpts != "" {
-		opts = append(opts, strings.Fields(jvmOpts)...)
-	}
-	opts = append(opts, "-cp", classPath, className)
-	opts = append(opts, args...)
-	return opts
-}
-
-func invokeJavaCommand(className string, jvmOpts string, args []string) bool {
-	classPath := getEnvWithFallbacks("/usr/share/java/cp-base-java/*", "UB_CLASSPATH", "CUB_CLASSPATH")
-	cmdArgs := buildJavaCommandArgs(jvmOpts, classPath, className, args)
-
-	cmd := exec.Command("java", cmdArgs...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return exitError.ExitCode() == 0
-		}
-		return false
-	}
-	return true
-}
-
 func getEnvOrDefault(envVar string, defaultValue string) string {
 	val := os.Getenv(envVar)
 	if len(val) == 0 {
@@ -516,23 +475,23 @@ func getEnvOrDefault(envVar string, defaultValue string) string {
 	return val
 }
 
-func checkKafkaReady(minNumBroker string, timeout string, bootstrapServers string, zookeeperConnect string, configFile string, security string) bool {
+func checkKafkaReady(minNumBroker string, timeout string, bootstrapServers string, configFile string, security string) error {
+	minBrokers, err := strconv.Atoi(minNumBroker)
+	if err != nil {
+		return fmt.Errorf("invalid min-num-brokers %q: %w", minNumBroker, err)
+	}
 
-	opts := []string{minNumBroker, timeout + "000"}
-	if bootstrapServers != "" {
-		opts = append(opts, "-b", bootstrapServers)
+	timeoutSecs, err := strconv.Atoi(timeout)
+	if err != nil {
+		return fmt.Errorf("invalid timeout %q: %w", timeout, err)
 	}
-	if zookeeperConnect != "" {
-		opts = append(opts, "-z", zookeeperConnect)
+
+	config, err := buildKafkaConfig(bootstrapServers, configFile, security)
+	if err != nil {
+		return err
 	}
-	if configFile != "" {
-		opts = append(opts, "-c", configFile)
-	}
-	if security != "" {
-		opts = append(opts, "-s", security)
-	}
-	jvmOpts := os.Getenv("KAFKA_OPTS")
-	return invokeJavaCommand("io.confluent.admin.utils.cli.KafkaReadyCommand", jvmOpts, opts)
+
+	return waitForKafkaReady(config, minBrokers, timeoutSecs)
 }
 
 func makeRequest(host string, port int, secure bool, ignoreCert bool, username string, password string, path string) (*http.Response, error) {
@@ -736,12 +695,7 @@ func runHttpReadyCmd(_ *cobra.Command, args []string) error {
 }
 
 func runKafkaReadyCmd(_ *cobra.Command, args []string) error {
-	success := checkKafkaReady(args[0], args[1], bootstrapServers, zookeeperConnect, configFile, security)
-	if !success {
-		err := fmt.Errorf("kafka-ready check failed")
-		return err
-	}
-	return nil
+	return checkKafkaReady(args[0], args[1], bootstrapServers, configFile, security)
 }
 
 func runComponentReadyCmd(componentName string, args []string) error {
@@ -880,7 +834,6 @@ func main() {
 
 	kafkaReadyCmd.PersistentFlags().StringVarP(&bootstrapServers, "bootstrap-servers", "b", "", "comma-separated list of kafka brokers")
 	kafkaReadyCmd.PersistentFlags().StringVarP(&configFile, "config", "c", "", "path to the config file")
-	kafkaReadyCmd.PersistentFlags().StringVarP(&zookeeperConnect, "zookeeper-connect", "z", "", "zookeeper connect string")
 	kafkaReadyCmd.PersistentFlags().StringVarP(&security, "security", "s", "", "security protocol to use when multiple listeners are enabled.")
 
 	srReadyCmd.PersistentFlags().BoolVarP(&secure, "secure", "", false, "use TLS to secure the connection")
