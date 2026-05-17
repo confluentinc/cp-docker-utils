@@ -4,5 +4,5 @@
 # Directory created by claude code
 **/.claude
 
-# binary files
-ub
+# binary files (ub binary at repo root)
+/ub
