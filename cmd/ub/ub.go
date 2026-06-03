@@ -481,6 +481,27 @@ func getEnvWithFallbacks(defaultValue string, envVars ...string) string {
 	return defaultValue
 }
 
+// resolveClassPath determines the Java classpath used for ub-invoked commands.
+//
+// Precedence (highest first):
+//  1. UB_CLASSPATH       - explicit runtime override (canonical)
+//  2. CUB_CLASSPATH      - explicit runtime override (legacy; kept for
+//     backward compatibility)
+//  3. UB_DEFAULT_CLASSPATH - per-image default, set by the base-image Dockerfile
+//     (e.g. cp-base-java-micro sets /usr/share/java/cp-base-java-micro/*)
+//  4. built-in default
+//
+// The per-image default lives in UB_DEFAULT_CLASSPATH, *below* the user
+// override vars, rather than in UB_CLASSPATH. Baking it into UB_CLASSPATH would
+// make that var always non-empty at runtime and short-circuit the fallback,
+// silently ignoring a user-set CUB_CLASSPATH on images that ship a non-standard
+// default classpath (the cp-base-java-micro regression). Keeping it lowest
+// preserves both the image default and CUB_CLASSPATH back-compat.
+func resolveClassPath() string {
+	defaultClassPath := getEnvWithFallbacks("/usr/share/java/cp-base-java/*", "UB_DEFAULT_CLASSPATH")
+	return getEnvWithFallbacks(defaultClassPath, "UB_CLASSPATH", "CUB_CLASSPATH")
+}
+
 func buildJavaCommandArgs(jvmOpts string, classPath string, className string, args []string) []string {
 	opts := []string{}
 	if jvmOpts != "" {
@@ -492,7 +513,7 @@ func buildJavaCommandArgs(jvmOpts string, classPath string, className string, ar
 }
 
 func invokeJavaCommand(className string, jvmOpts string, args []string) bool {
-	classPath := getEnvWithFallbacks("/usr/share/java/cp-base-java/*", "UB_CLASSPATH", "CUB_CLASSPATH")
+	classPath := resolveClassPath()
 	cmdArgs := buildJavaCommandArgs(jvmOpts, classPath, className, args)
 
 	cmd := exec.Command("java", cmdArgs...)
