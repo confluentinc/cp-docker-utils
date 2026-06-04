@@ -1258,16 +1258,8 @@ func Test_resolveClassPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for _, key := range classPathVars {
-				os.Unsetenv(key)
+				t.Setenv(key, tt.envSetup[key])
 			}
-			for key, value := range tt.envSetup {
-				os.Setenv(key, value)
-			}
-			defer func() {
-				for _, key := range classPathVars {
-					os.Unsetenv(key)
-				}
-			}()
 
 			if result := resolveClassPath(); result != tt.expected {
 				t.Errorf("resolveClassPath() = %q, expected %q", result, tt.expected)
