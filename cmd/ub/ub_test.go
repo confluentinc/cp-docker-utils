@@ -1257,17 +1257,13 @@ func Test_resolveClassPath(t *testing.T) {
 	classPathVars := []string{"UB_CLASSPATH", "CUB_CLASSPATH", "UB_DEFAULT_CLASSPATH"}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// t.Setenv saves and restores any pre-existing value automatically.
+			// getEnvWithFallbacks treats an empty value as unset (it checks len>0),
+			// so clear every classpath var (empty for those not under test) to
+			// isolate the result from the host environment.
 			for _, key := range classPathVars {
-				os.Unsetenv(key)
+				t.Setenv(key, tt.envSetup[key])
 			}
-			for key, value := range tt.envSetup {
-				os.Setenv(key, value)
-			}
-			defer func() {
-				for _, key := range classPathVars {
-					os.Unsetenv(key)
-				}
-			}()
 
 			if result := resolveClassPath(); result != tt.expected {
 				t.Errorf("resolveClassPath() = %q, expected %q", result, tt.expected)
