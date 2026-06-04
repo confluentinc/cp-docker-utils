@@ -1212,6 +1212,66 @@ func Test_getEnvWithFallbacks(t *testing.T) {
 	}
 }
 
+func Test_resolveClassPath(t *testing.T) {
+	const (
+		base  = "/usr/share/java/cp-base-java/*"
+		micro = "/usr/share/java/cp-base-java-micro/*"
+	)
+	tests := []struct {
+		name     string
+		envSetup map[string]string
+		expected string
+	}{
+		{
+			name:     "no overrides falls back to built-in default",
+			envSetup: map[string]string{},
+			expected: base,
+		},
+		{
+			name:     "image default via UB_DEFAULT_CLASSPATH (e.g. micro)",
+			envSetup: map[string]string{"UB_DEFAULT_CLASSPATH": micro},
+			expected: micro,
+		},
+		{
+			name:     "user CUB_CLASSPATH wins over image default (legacy back-compat)",
+			envSetup: map[string]string{"UB_DEFAULT_CLASSPATH": micro, "CUB_CLASSPATH": "/my/jars/*"},
+			expected: "/my/jars/*",
+		},
+		{
+			name:     "explicit UB_CLASSPATH wins over image default",
+			envSetup: map[string]string{"UB_DEFAULT_CLASSPATH": micro, "UB_CLASSPATH": "/my/jars/*"},
+			expected: "/my/jars/*",
+		},
+		{
+			name:     "UB_CLASSPATH takes precedence over CUB_CLASSPATH",
+			envSetup: map[string]string{"UB_CLASSPATH": "/a/*", "CUB_CLASSPATH": "/b/*"},
+			expected: "/a/*",
+		},
+		{
+			name:     "CUB_CLASSPATH honored when no UB_CLASSPATH/default set",
+			envSetup: map[string]string{"CUB_CLASSPATH": "/legacy/*"},
+			expected: "/legacy/*",
+		},
+	}
+
+	classPathVars := []string{"UB_CLASSPATH", "CUB_CLASSPATH", "UB_DEFAULT_CLASSPATH"}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// t.Setenv saves and restores any pre-existing value automatically.
+			// getEnvWithFallbacks treats an empty value as unset (it checks len>0),
+			// so clear every classpath var (empty for those not under test) to
+			// isolate the result from the host environment.
+			for _, key := range classPathVars {
+				t.Setenv(key, tt.envSetup[key])
+			}
+
+			if result := resolveClassPath(); result != tt.expected {
+				t.Errorf("resolveClassPath() = %q, expected %q", result, tt.expected)
+			}
+		})
+	}
+}
+
 func Test_runComponentReadyCmd(t *testing.T) {
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
