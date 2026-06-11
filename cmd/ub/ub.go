@@ -89,6 +89,8 @@ var (
 
 	re = regexp.MustCompile("[^_]_[^_]")
 
+	listenerHostRe = regexp.MustCompile("://(.*?):")
+
 	ensureCmd = &cobra.Command{
 		Use:   "ensure <environment-variable>",
 		Short: "checks if environment variable is set or not",
@@ -853,43 +855,22 @@ func parseLog4jLoggers(loggersStr string, defaultLoggers ...map[string]string) m
 	return result
 }
 
+// runListenersCmd derives the `listeners` value from `advertised.listeners` by
+// replacing the host of every listener entry with 0.0.0.0, so the broker binds
+// on all interfaces while still advertising its real address. The listener name
+// (protocol prefix) and port are preserved.
+//
+// This intentionally mirrors the legacy `cub` behavior exactly: a single regex
+// substitution of `://(.*?):` -> `://0.0.0.0:` over the whole input string. As a
+// result, listener names/prefixes are kept (e.g. PLAINTEXT://foo:9092 ->
+// PLAINTEXT://0.0.0.0:9092), entries without a protocol prefix pass through
+// unchanged, and surrounding whitespace/trailing separators are left intact.
 func runListenersCmd(args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("exactly one argument required: advertised listeners")
 	}
 
-	if args[0] == "" {
-		return "", fmt.Errorf("advertised listeners cannot be empty")
-	}
-
-	advertisedListeners := args[0]
-	rawListeners := strings.Split(advertisedListeners, ",")
-	processedListeners := make([]string, 0, len(rawListeners))
-
-	for _, listener := range rawListeners {
-		listener = strings.TrimSpace(listener)
-		if listener == "" {
-			continue
-		}
-
-		if strings.Contains(listener, "://") {
-			parts := strings.SplitN(listener, "://", 2)
-			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-				return "", fmt.Errorf("malformed listener: %q", listener)
-			}
-			if strings.Contains(parts[1], "://") {
-				return "", fmt.Errorf("malformed listener: %q", listener)
-			}
-			processedListeners = append(processedListeners, parts[1])
-		} else {
-			processedListeners = append(processedListeners, listener)
-		}
-	}
-
-	if len(processedListeners) > 0 {
-		return strings.Join(processedListeners, ","), nil
-	}
-	return "", nil
+	return listenerHostRe.ReplaceAllString(args[0], "://0.0.0.0:"), nil
 }
 
 func main() {

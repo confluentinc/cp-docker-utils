@@ -958,13 +958,19 @@ func TestRunListenersCmd(t *testing.T) {
 		{
 			name:                "single listener with protocol",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092"},
-			expectedOutput:      "localhost:9092",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
 			expectError:         false,
 		},
 		{
 			name:                "multiple listeners with protocols",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092,SASL_PLAINTEXT://localhost:9093"},
-			expectedOutput:      "localhost:9092,localhost:9093",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT://0.0.0.0:9093",
+			expectError:         false,
+		},
+		{
+			name:                "named listeners",
+			advertisedListeners: []string{"BROKER://kafka1.corp:9095,SASL_SSL://kafka1.corp:9092,MTLS://kafka1.corp:9093"},
+			expectedOutput:      "BROKER://0.0.0.0:9095,SASL_SSL://0.0.0.0:9092,MTLS://0.0.0.0:9093",
 			expectError:         false,
 		},
 		{
@@ -974,34 +980,46 @@ func TestRunListenersCmd(t *testing.T) {
 			expectError:         false,
 		},
 		{
-			name:                "mixed listeners",
+			name:                "mixed listeners with and without protocol",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092,localhost:9093,SASL_PLAINTEXT://localhost:9094"},
-			expectedOutput:      "localhost:9092,localhost:9093,localhost:9094",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,localhost:9093,SASL_PLAINTEXT://0.0.0.0:9094",
+			expectError:         false,
+		},
+		{
+			name:                "ip host",
+			advertisedListeners: []string{"SSL://10.0.4.5:7888"},
+			expectedOutput:      "SSL://0.0.0.0:7888",
+			expectError:         false,
+		},
+		{
+			name:                "whitespace preserved",
+			advertisedListeners: []string{"PLAINTEXT://foo:9999, SSL://bar:9098"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9999, SSL://0.0.0.0:9098",
+			expectError:         false,
+		},
+		{
+			name:                "trailing comma preserved",
+			advertisedListeners: []string{"PLAINTEXT://localhost:9092,"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,",
+			expectError:         false,
+		},
+		{
+			name:                "already zero host",
+			advertisedListeners: []string{"PLAINTEXT://0.0.0.0:9092"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
 			expectError:         false,
 		},
 		{
 			name:                "empty advertised listeners",
 			advertisedListeners: []string{""},
 			expectedOutput:      "",
-			expectError:         true,
+			expectError:         false,
 		},
 		{
 			name:                "multiple arguments",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092", "extra-arg"},
 			expectedOutput:      "",
 			expectError:         true,
-		},
-		{
-			name:                "malformed protocol",
-			advertisedListeners: []string{"PLAINTEXT://://localhost:9092"},
-			expectedOutput:      "",
-			expectError:         true,
-		},
-		{
-			name:                "trailing comma",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092,"},
-			expectedOutput:      "localhost:9092",
-			expectError:         false,
 		},
 		{
 			name:                "no arguments",
