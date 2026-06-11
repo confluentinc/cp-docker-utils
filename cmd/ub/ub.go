@@ -89,7 +89,7 @@ var (
 
 	re = regexp.MustCompile("[^_]_[^_]")
 
-	listenerHostRe = regexp.MustCompile("://(.*?):")
+	listenerHostRegex = regexp.MustCompile("://(.*?):")
 
 	ensureCmd = &cobra.Command{
 		Use:   "ensure <environment-variable>",
@@ -190,11 +190,7 @@ var (
 		Short: "extracts listeners from advertised listeners",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			listeners, err := runListenersCmd(args)
-			if err != nil {
-				return err
-			}
-			fmt.Println(listeners)
+			fmt.Println(runListenersCmd(args[0]))
 			return nil
 		},
 	}
@@ -858,12 +854,8 @@ func parseLog4jLoggers(loggersStr string, defaultLoggers ...map[string]string) m
 // runListenersCmd derives `listeners` from `advertised.listeners` by replacing
 // each host with 0.0.0.0 (name/prefix and port preserved). Mirrors legacy cub:
 // a single `://(.*?):` -> `://0.0.0.0:` substitution over the whole string.
-func runListenersCmd(args []string) (string, error) {
-	if len(args) != 1 {
-		return "", fmt.Errorf("exactly one argument required: advertised listeners")
-	}
-
-	return listenerHostRe.ReplaceAllString(args[0], "://0.0.0.0:"), nil
+func runListenersCmd(arg string) string {
+	return listenerHostRegex.ReplaceAllString(arg, "://0.0.0.0:")
 }
 
 func main() {

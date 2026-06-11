@@ -950,99 +950,66 @@ func Test_setProperties(t *testing.T) {
 }
 func TestRunListenersCmd(t *testing.T) {
 	tests := []struct {
-		name                string
-		advertisedListeners []string
-		expectedOutput      string
-		expectError         bool
+		name           string
+		advertised     string
+		expectedOutput string
 	}{
 		{
-			name:                "single listener with protocol",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
-			expectError:         false,
+			name:           "single listener with protocol",
+			advertised:     "PLAINTEXT://localhost:9092",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9092",
 		},
 		{
-			name:                "multiple listeners with protocols",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092,SASL_PLAINTEXT://localhost:9093"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT://0.0.0.0:9093",
-			expectError:         false,
+			name:           "multiple listeners with protocols",
+			advertised:     "PLAINTEXT://localhost:9092,SASL_PLAINTEXT://localhost:9093",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT://0.0.0.0:9093",
 		},
 		{
-			name:                "named listeners",
-			advertisedListeners: []string{"BROKER://kafka1.corp:9095,SASL_SSL://kafka1.corp:9092,MTLS://kafka1.corp:9093"},
-			expectedOutput:      "BROKER://0.0.0.0:9095,SASL_SSL://0.0.0.0:9092,MTLS://0.0.0.0:9093",
-			expectError:         false,
+			name:           "named listeners",
+			advertised:     "BROKER://kafka1.corp:9095,SASL_SSL://kafka1.corp:9092,MTLS://kafka1.corp:9093",
+			expectedOutput: "BROKER://0.0.0.0:9095,SASL_SSL://0.0.0.0:9092,MTLS://0.0.0.0:9093",
 		},
 		{
-			name:                "listener without protocol",
-			advertisedListeners: []string{"localhost:9092"},
-			expectedOutput:      "localhost:9092",
-			expectError:         false,
+			name:           "listener without protocol",
+			advertised:     "localhost:9092",
+			expectedOutput: "localhost:9092",
 		},
 		{
-			name:                "mixed listeners with and without protocol",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092,localhost:9093,SASL_PLAINTEXT://localhost:9094"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,localhost:9093,SASL_PLAINTEXT://0.0.0.0:9094",
-			expectError:         false,
+			name:           "mixed listeners with and without protocol",
+			advertised:     "PLAINTEXT://localhost:9092,localhost:9093,SASL_PLAINTEXT://localhost:9094",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9092,localhost:9093,SASL_PLAINTEXT://0.0.0.0:9094",
 		},
 		{
-			name:                "ip host",
-			advertisedListeners: []string{"SSL://10.0.4.5:7888"},
-			expectedOutput:      "SSL://0.0.0.0:7888",
-			expectError:         false,
+			name:           "ip host",
+			advertised:     "SSL://10.0.4.5:7888",
+			expectedOutput: "SSL://0.0.0.0:7888",
 		},
 		{
-			name:                "whitespace preserved",
-			advertisedListeners: []string{"PLAINTEXT://foo:9999, SSL://bar:9098"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9999, SSL://0.0.0.0:9098",
-			expectError:         false,
+			name:           "whitespace preserved",
+			advertised:     "PLAINTEXT://foo:9999, SSL://bar:9098",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9999, SSL://0.0.0.0:9098",
 		},
 		{
-			name:                "trailing comma preserved",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092,"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,",
-			expectError:         false,
+			name:           "trailing comma preserved",
+			advertised:     "PLAINTEXT://localhost:9092,",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9092,",
 		},
 		{
-			name:                "already zero host",
-			advertisedListeners: []string{"PLAINTEXT://0.0.0.0:9092"},
-			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
-			expectError:         false,
+			name:           "already zero host",
+			advertised:     "PLAINTEXT://0.0.0.0:9092",
+			expectedOutput: "PLAINTEXT://0.0.0.0:9092",
 		},
 		{
-			name:                "empty advertised listeners",
-			advertisedListeners: []string{""},
-			expectedOutput:      "",
-			expectError:         false,
-		},
-		{
-			name:                "multiple arguments",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092", "extra-arg"},
-			expectedOutput:      "",
-			expectError:         true,
-		},
-		{
-			name:                "no arguments",
-			advertisedListeners: []string{},
-			expectedOutput:      "",
-			expectError:         true,
+			name:           "empty advertised listeners",
+			advertised:     "",
+			expectedOutput: "",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			output, err := runListenersCmd(tt.advertisedListeners)
-			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got nil for test case: %s", tt.name)
-				}
-			} else {
-				if err != nil {
-					t.Errorf("unexpected error for test case %s: %v", tt.name, err)
-				}
-				if output != tt.expectedOutput {
-					t.Errorf("test case %s: got output %q, want %q", tt.name, output, tt.expectedOutput)
-				}
+			if output := runListenersCmd(tt.advertised); output != tt.expectedOutput {
+				t.Errorf("test case %s: got output %q, want %q", tt.name, output, tt.expectedOutput)
 			}
 		})
 	}
