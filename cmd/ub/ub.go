@@ -89,9 +89,6 @@ var (
 
 	re = regexp.MustCompile("[^_]_[^_]")
 
-	// listenerHostRe matches the host portion of a listener entry, i.e. the text
-	// between "://" and the following ":". This mirrors the legacy `cub` regex
-	// (`://(.*?):`) used to derive `listeners` from `advertised.listeners`.
 	listenerHostRe = regexp.MustCompile("://(.*?):")
 
 	ensureCmd = &cobra.Command{
