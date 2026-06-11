@@ -89,6 +89,8 @@ var (
 
 	re = regexp.MustCompile("[^_]_[^_]")
 
+	listenerHostRegex = regexp.MustCompile("://(.*?):")
+
 	ensureCmd = &cobra.Command{
 		Use:   "ensure <environment-variable>",
 		Short: "checks if environment variable is set or not",
@@ -188,11 +190,7 @@ var (
 		Short: "extracts listeners from advertised listeners",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			listeners, err := runListenersCmd(args)
-			if err != nil {
-				return err
-			}
-			fmt.Println(listeners)
+			fmt.Println(runListenersCmd(args[0]))
 			return nil
 		},
 	}
@@ -853,43 +851,11 @@ func parseLog4jLoggers(loggersStr string, defaultLoggers ...map[string]string) m
 	return result
 }
 
-func runListenersCmd(args []string) (string, error) {
-	if len(args) != 1 {
-		return "", fmt.Errorf("exactly one argument required: advertised listeners")
-	}
-
-	if args[0] == "" {
-		return "", fmt.Errorf("advertised listeners cannot be empty")
-	}
-
-	advertisedListeners := args[0]
-	rawListeners := strings.Split(advertisedListeners, ",")
-	processedListeners := make([]string, 0, len(rawListeners))
-
-	for _, listener := range rawListeners {
-		listener = strings.TrimSpace(listener)
-		if listener == "" {
-			continue
-		}
-
-		if strings.Contains(listener, "://") {
-			parts := strings.SplitN(listener, "://", 2)
-			if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
-				return "", fmt.Errorf("malformed listener: %q", listener)
-			}
-			if strings.Contains(parts[1], "://") {
-				return "", fmt.Errorf("malformed listener: %q", listener)
-			}
-			processedListeners = append(processedListeners, parts[1])
-		} else {
-			processedListeners = append(processedListeners, listener)
-		}
-	}
-
-	if len(processedListeners) > 0 {
-		return strings.Join(processedListeners, ","), nil
-	}
-	return "", nil
+// runListenersCmd derives `listeners` from `advertised.listeners` by replacing
+// each host with 0.0.0.0 (name/prefix and port preserved). Mirrors legacy cub:
+// a single `://(.*?):` -> `://0.0.0.0:` substitution over the whole string.
+func runListenersCmd(arg string) string {
+	return listenerHostRegex.ReplaceAllString(arg, "://0.0.0.0:")
 }
 
 func main() {
