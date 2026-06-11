@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -86,8 +85,6 @@ var (
 			ExpectedContent: "version",
 		},
 	}
-
-	re = regexp.MustCompile("[^_]_[^_]")
 
 	ensureCmd = &cobra.Command{
 		Use:   "ensure <environment-variable>",
@@ -301,14 +298,24 @@ func renderConfig(writer io.Writer, configSpec ConfigSpec) error {
 // Moreover, the whole string is converted to lower-case.
 // The behavior of sequences of four or more underscores is undefined.
 func ConvertKey(key string) string {
-	singleReplaced := re.ReplaceAllStringFunc(key, replaceUnderscores)
+	singleReplaced := dotIsolatedUnderscores(key)
 	singleTripleReplaced := strings.ReplaceAll(singleReplaced, "___", "-")
 	return strings.ToLower(strings.ReplaceAll(singleTripleReplaced, "__", "_"))
 }
 
-// replaceUnderscores replaces every underscore '_' by a dot '.'
-func replaceUnderscores(s string) string {
-	return strings.ReplaceAll(s, "_", ".")
+// dotIsolatedUnderscores replaces every '_' that has a non-'_' on both sides with '.',
+// leaving underscore runs and boundary underscores untouched. This is a RE2-safe
+// (lookaround-free) equivalent of the legacy cub/dub regex (?<=[^_])_(?=[^_]).
+func dotIsolatedUnderscores(s string) string {
+	var b strings.Builder
+	for i := 0; i < len(s); i++ {
+		if c := s[i]; c == '_' && i > 0 && i < len(s)-1 && s[i-1] != '_' && s[i+1] != '_' {
+			b.WriteByte('.')
+		} else {
+			b.WriteByte(c)
+		}
+	}
+	return b.String()
 }
 
 // ListToMap splits each and entry of the kvList argument at '=' into a key/value pair and returns a map of all the k/v pair thus obtained.
