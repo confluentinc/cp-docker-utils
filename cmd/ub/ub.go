@@ -855,16 +855,9 @@ func parseLog4jLoggers(loggersStr string, defaultLoggers ...map[string]string) m
 	return result
 }
 
-// runListenersCmd derives the `listeners` value from `advertised.listeners` by
-// replacing the host of every listener entry with 0.0.0.0, so the broker binds
-// on all interfaces while still advertising its real address. The listener name
-// (protocol prefix) and port are preserved.
-//
-// This intentionally mirrors the legacy `cub` behavior exactly: a single regex
-// substitution of `://(.*?):` -> `://0.0.0.0:` over the whole input string. As a
-// result, listener names/prefixes are kept (e.g. PLAINTEXT://foo:9092 ->
-// PLAINTEXT://0.0.0.0:9092), entries without a protocol prefix pass through
-// unchanged, and surrounding whitespace/trailing separators are left intact.
+// runListenersCmd derives `listeners` from `advertised.listeners` by replacing
+// each host with 0.0.0.0 (name/prefix and port preserved). Mirrors legacy cub:
+// a single `://(.*?):` -> `://0.0.0.0:` substitution over the whole string.
 func runListenersCmd(args []string) (string, error) {
 	if len(args) != 1 {
 		return "", fmt.Errorf("exactly one argument required: advertised listeners")
