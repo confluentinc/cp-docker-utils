@@ -956,52 +956,78 @@ func TestRunListenersCmd(t *testing.T) {
 		expectError         bool
 	}{
 		{
+			// cub parity: keep the protocol prefix, replace host with 0.0.0.0.
 			name:                "single listener with protocol",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092"},
-			expectedOutput:      "localhost:9092",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
 			expectError:         false,
 		},
 		{
 			name:                "multiple listeners with protocols",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092,SASL_PLAINTEXT://localhost:9093"},
-			expectedOutput:      "localhost:9092,localhost:9093",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,SASL_PLAINTEXT://0.0.0.0:9093",
 			expectError:         false,
 		},
 		{
+			// Real-world multi-named-listener case from INC-11376.
+			name:                "named listeners",
+			advertisedListeners: []string{"BROKER://kafka1.corp:9095,SASL_SSL://kafka1.corp:9092,MTLS://kafka1.corp:9093"},
+			expectedOutput:      "BROKER://0.0.0.0:9095,SASL_SSL://0.0.0.0:9092,MTLS://0.0.0.0:9093",
+			expectError:         false,
+		},
+		{
+			// No protocol prefix => no match => passed through unchanged (cub).
 			name:                "listener without protocol",
 			advertisedListeners: []string{"localhost:9092"},
 			expectedOutput:      "localhost:9092",
 			expectError:         false,
 		},
 		{
-			name:                "mixed listeners",
+			// Only entries with a protocol prefix are rewritten.
+			name:                "mixed listeners with and without protocol",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092,localhost:9093,SASL_PLAINTEXT://localhost:9094"},
-			expectedOutput:      "localhost:9092,localhost:9093,localhost:9094",
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,localhost:9093,SASL_PLAINTEXT://0.0.0.0:9094",
 			expectError:         false,
 		},
 		{
+			name:                "ip host",
+			advertisedListeners: []string{"SSL://10.0.4.5:7888"},
+			expectedOutput:      "SSL://0.0.0.0:7888",
+			expectError:         false,
+		},
+		{
+			// cub does a whole-string regex sub: surrounding whitespace is preserved.
+			name:                "whitespace preserved",
+			advertisedListeners: []string{"PLAINTEXT://foo:9999, SSL://bar:9098"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9999, SSL://0.0.0.0:9098",
+			expectError:         false,
+		},
+		{
+			// cub does not split/trim, so a trailing separator is kept as-is.
+			name:                "trailing comma preserved",
+			advertisedListeners: []string{"PLAINTEXT://localhost:9092,"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092,",
+			expectError:         false,
+		},
+		{
+			// Idempotent: already-0.0.0.0 input is unchanged.
+			name:                "already zero host",
+			advertisedListeners: []string{"PLAINTEXT://0.0.0.0:9092"},
+			expectedOutput:      "PLAINTEXT://0.0.0.0:9092",
+			expectError:         false,
+		},
+		{
+			// Empty input yields empty output (cub returns ""), not an error.
 			name:                "empty advertised listeners",
 			advertisedListeners: []string{""},
 			expectedOutput:      "",
-			expectError:         true,
+			expectError:         false,
 		},
 		{
 			name:                "multiple arguments",
 			advertisedListeners: []string{"PLAINTEXT://localhost:9092", "extra-arg"},
 			expectedOutput:      "",
 			expectError:         true,
-		},
-		{
-			name:                "malformed protocol",
-			advertisedListeners: []string{"PLAINTEXT://://localhost:9092"},
-			expectedOutput:      "",
-			expectError:         true,
-		},
-		{
-			name:                "trailing comma",
-			advertisedListeners: []string{"PLAINTEXT://localhost:9092,"},
-			expectedOutput:      "localhost:9092",
-			expectError:         false,
 		},
 		{
 			name:                "no arguments",
