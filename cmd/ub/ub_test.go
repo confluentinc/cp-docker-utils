@@ -216,6 +216,56 @@ func Test_convertKey(t *testing.T) {
 			args:       args{key: "KEY_WITH___DASH_AND___MORE__UNDERSCORE"},
 			wantString: "key.with-dash.and-more_underscore",
 		},
+		{
+			name:       "single char segment in the middle",
+			args:       args{key: "KEY_A_FOO"},
+			wantString: "key.a.foo",
+		},
+		{
+			name:       "all single char segments",
+			args:       args{key: "A_B_C"},
+			wantString: "a.b.c",
+		},
+		{
+			name:       "chained single char segments",
+			args:       args{key: "X_Y_Z_W"},
+			wantString: "x.y.z.w",
+		},
+		{
+			name:       "single char listener name",
+			args:       args{key: "LISTENER_NAME_X_SSL_KEYSTORE_LOCATION"},
+			wantString: "listener.name.x.ssl.keystore.location",
+		},
+		{
+			name:       "leading single underscore kept",
+			args:       args{key: "_KEY"},
+			wantString: "_key",
+		},
+		{
+			name:       "trailing single underscore kept",
+			args:       args{key: "KEY_"},
+			wantString: "key_",
+		},
+		{
+			name:       "leading triple underscore run",
+			args:       args{key: "___KEY"},
+			wantString: "-key",
+		},
+		{
+			name:       "single char adjacent to underscore runs",
+			args:       args{key: "___A___"},
+			wantString: "-a-",
+		},
+		{
+			name:       "quadruple underscore",
+			args:       args{key: "A____B"},
+			wantString: "a-_b",
+		},
+		{
+			name:       "digit segments",
+			args:       args{key: "KEY_123_BAR"},
+			wantString: "key.123.bar",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
