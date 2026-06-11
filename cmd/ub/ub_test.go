@@ -216,6 +216,26 @@ func Test_convertKey(t *testing.T) {
 			args:       args{key: "KEY_WITH___DASH_AND___MORE__UNDERSCORE"},
 			wantString: "key.with-dash.and-more_underscore",
 		},
+		{
+			name:       "single char segment in the middle",
+			args:       args{key: "KEY_A_FOO"},
+			wantString: "key.a.foo",
+		},
+		{
+			name:       "all single char segments",
+			args:       args{key: "A_B_C"},
+			wantString: "a.b.c",
+		},
+		{
+			name:       "chained single char segments",
+			args:       args{key: "X_Y_Z_W"},
+			wantString: "x.y.z.w",
+		},
+		{
+			name:       "single char listener name",
+			args:       args{key: "LISTENER_NAME_X_SSL_KEYSTORE_LOCATION"},
+			wantString: "listener.name.x.ssl.keystore.location",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
